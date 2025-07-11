@@ -130,7 +130,8 @@ class LigandPocketDDPM(pl.LightningModule):
             self.dataset_info['atom_encoder'] = self.lig_type_encoder
             self.dataset_info['atom_decoder'] = self.lig_type_decoder
 
-        self.atom_nf = len(self.lig_type_decoder)
+        # original atom‐type dim plus your phys-chem flags (4)
+        self.atom_nf = len(self.lig_type_decoder) + 4
         self.aa_nf = len(self.pocket_type_decoder)
         self.x_dims = 3
 
@@ -397,13 +398,15 @@ class LigandPocketDDPM(pl.LightningModule):
 
             print(f'Evaluation took {time() - tic:.2f} seconds')
 
-        if (self.current_epoch + 1) % self.visualize_sample_epoch == 0:
+        if self.visualize_sample_epoch > 0 \
+        and (self.current_epoch + 1) % self.visualize_sample_epoch == 0:
             tic = time()
             getattr(self, 'sample_and_save' + suffix)(
                 self.eval_params.n_visualize_samples)
             print(f'Sample visualization took {time() - tic:.2f} seconds')
 
-        if (self.current_epoch + 1) % self.visualize_chain_epoch == 0:
+        if self.visualize_chain_epoch > 0 \
+        and(self.current_epoch + 1) % self.visualize_chain_epoch == 0:
             tic = time()
             getattr(self, 'sample_chain_and_save' + suffix)(
                 self.eval_params.keep_frames)
@@ -432,7 +435,11 @@ class LigandPocketDDPM(pl.LightningModule):
                 device=self.device)
 
             x = xh_lig[:, :self.x_dims].detach().cpu()
-            atom_type = xh_lig[:, self.x_dims:].argmax(1).detach().cpu()
+            # atom_type = xh_lig[:, self.x_dims:].argmax(1).detach().cpu()
+            # only pick the original atom‐type one-hot (ignore the extra 4 phys-chem flags)
+            orig_atom_nf = len(self.lig_type_decoder)
+            atom_type = xh_lig[:, self.x_dims:self.x_dims + orig_atom_nf].argmax(1).detach().cpu()
+
             lig_mask = lig_mask.cpu()
 
             molecules.extend(list(
@@ -526,7 +533,11 @@ class LigandPocketDDPM(pl.LightningModule):
                 pocket, num_nodes_lig)
 
             x = xh_lig[:, :self.x_dims].detach().cpu()
-            atom_type = xh_lig[:, self.x_dims:].argmax(1).detach().cpu()
+            # atom_type = xh_lig[:, self.x_dims:].argmax(1).detach().cpu()
+            # only pick the original atom‐type one-hot (ignore the extra 4 phys-chem flags)
+            orig_atom_nf = len(self.lig_type_decoder)
+            atom_type = xh_lig[:, self.x_dims:self.x_dims + orig_atom_nf].argmax(1).detach().cpu()
+            
             lig_mask = lig_mask.cpu()
 
             if self.virtual_nodes:
@@ -853,7 +864,10 @@ class LigandPocketDDPM(pl.LightningModule):
 
         # Build mol objects
         x = xh_lig[:, :self.x_dims].detach().cpu()
-        atom_type = xh_lig[:, self.x_dims:].argmax(1).detach().cpu()
+        # atom_type = xh_lig[:, self.x_dims:].argmax(1).detach().cpu()
+        # only pick the original atom‐type one-hot (ignore the extra 4 phys-chem flags)
+        orig_atom_nf = len(self.lig_type_decoder)
+        atom_type = xh_lig[:, self.x_dims:self.x_dims + orig_atom_nf].argmax(1).detach().cpu()
         lig_mask = lig_mask.cpu()
 
         molecules = []

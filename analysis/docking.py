@@ -17,7 +17,7 @@ except ModuleNotFoundError as e:
 
 def calculate_smina_score(pdb_file, sdf_file):
     # add '-o <name>_smina.sdf' if you want to see the output
-    out = os.popen(f'smina.static -l {sdf_file} -r {pdb_file} '
+    out = os.popen(f'smina -l {sdf_file} -r {pdb_file} '
                    f'--score_only').read()
     matches = re.findall(
         r"Affinity:[ ]+([+-]?[0-9]*[.]?[0-9]+)[ ]+\(kcal/mol\)", out)
@@ -35,17 +35,18 @@ def smina_score(rdmols, receptor_file):
     if isinstance(receptor_file, list):
         scores = []
         for mol, rec_file in zip(rdmols, receptor_file):
-            with tempfile.NamedTemporaryFile(suffix='.sdf') as tmp:
-                tmp_file = tmp.name
-                utils.write_sdf_file(tmp_file, [mol])
-                scores.extend(calculate_smina_score(rec_file, tmp_file))
+            fd, tmp_file = tempfile.mkstemp(suffix='.sdf')
+            os.close(fd)
+            utils.write_sdf_file(tmp_file, [mol])
+            scores.extend(calculate_smina_score(rec_file, tmp_file))
 
     # Use same receptor file for all molecules
     else:
-        with tempfile.NamedTemporaryFile(suffix='.sdf') as tmp:
-            tmp_file = tmp.name
-            utils.write_sdf_file(tmp_file, rdmols)
-            scores = calculate_smina_score(receptor_file, tmp_file)
+        fd, tmp_file = tempfile.mkstemp(suffix='.sdf')
+        os.close(fd)
+
+        utils.write_sdf_file(tmp_file, [mol])
+        scores.extend(calculate_smina_score(rec_file, tmp_file))
 
     return scores
 

@@ -10,6 +10,8 @@ import numpy as np
 
 from lightning_modules import LigandPocketDDPM
 
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 def merge_args_and_yaml(args, config_dict):
     arg_dict = args.__dict__
@@ -91,10 +93,10 @@ if __name__ == "__main__":
 
     logger = pl.loggers.WandbLogger(
         save_dir=args.logdir,
-        project='ligand-pocket-ddpm',
+        project='diffsbdd',
         group=args.wandb_params.group,
-        name=args.run_name,
-        id=args.run_name,
+        #name=args.run_name,
+        #id=args.run_name,
         resume='must' if args.resume is not None else False,
         entity=args.wandb_params.entity,
         mode=args.wandb_params.mode,
@@ -112,6 +114,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         max_epochs=args.n_epochs,
         logger=logger,
+        accumulate_grad_batches=16,
         callbacks=[checkpoint_callback],
         enable_progress_bar=args.enable_progress_bar,
         num_sanity_val_steps=args.num_sanity_val_steps,
